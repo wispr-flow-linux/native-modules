@@ -1,14 +1,15 @@
 #!/usr/bin/env bash
 #===============================================================================
 # rebuild-native-modules.sh -- rebuild Wispr Flow's native sqlite addons for the
-# Linux Electron 42 ABI, deterministically, from public npm + the in-repo V8
+# target Linux Electron ABI, deterministically, from public npm + the in-repo V8
 # patch. NO Wispr Flow code is involved.
 #
 # The shipped app carries WINDOWS PE .node for:
 #   better-sqlite3-multiple-ciphers   (encrypted SQLCipher DB engine)
 #   sqlite3                            (plain sqlite)
-# On Linux they must be rebuilt against Electron's V8 14.8 / Node 24 ABI (146).
-# better-sqlite3-multiple-ciphers does NOT compile against V8 14.8 unpatched;
+# On Linux they must be rebuilt against the target Electron's V8 / Node ABI
+# (Electron 44: V8 15.2 / Node 24, ABI 149).
+# better-sqlite3-multiple-ciphers does NOT compile against V8 14.8+ unpatched;
 # the clean-room patch in scripts/patches/ is applied to a pristine checkout.
 #
 # This is the single source of rebuild truth, shared by:
@@ -26,7 +27,8 @@
 #   <arch>      x86_64 | aarch64 | amd64 | arm64 | x64
 #   out_dir     where the verified .node + checksums + lock are written
 # Env:
-#   ELECTRON_VERSION   electron to target          (default: 42.3.0)
+#   ELECTRON_VERSION   electron to target          (default: 44.7.2)
+#   ELECTRON_ABI       its NODE_MODULE_VERSION     (default: 149)
 #   ELECTRON_BIN       electron binary for the runtime ABI assertion (optional
 #                      but STRONGLY recommended; without it the ABI check is
 #                      skipped and a wrong-ABI build could slip through)
@@ -41,10 +43,11 @@ set -uo pipefail
 readonly BSC_VERSION='12.5.0'        # better-sqlite3-multiple-ciphers
 readonly SQLITE_VERSION='5.1.7'      # sqlite3
 readonly REBUILD_VERSION='4.0.4'     # @electron/rebuild
-readonly ELECTRON_ABI='146'        # NODE_MODULE_VERSION (Electron 42/V8 14.8)
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-electron_version="${ELECTRON_VERSION:-42.3.0}"
+electron_version="${ELECTRON_VERSION:-44.7.2}"
+# NODE_MODULE_VERSION of that Electron (44 -> 149, 42 -> 146)
+readonly ELECTRON_ABI="${ELECTRON_ABI:-149}"
 patch_file="$script_dir/patches/v8-14.8-better-sqlite3-multiple-ciphers.patch"
 pinned_dir="$script_dir/native-modules"
 
@@ -142,7 +145,7 @@ verify_smoke() {
 	if [[ -z ${ELECTRON_BIN:-} ]]; then
 		log 'WARNING: ELECTRON_BIN unset -- skipping the ABI + encrypted-DB smoke'
 		log '  test. A wrong-ABI build (e.g. compiled against system Node headers)'
-		log '  will NOT be caught here. Set ELECTRON_BIN to the staged Electron 42.'
+		log '  will NOT be caught here. Set ELECTRON_BIN to the staged Electron.'
 		return 0
 	fi
 	bash "$pinned_dir/smoke-test.sh" "$out_dir" "$ELECTRON_BIN" "$ELECTRON_ABI" \

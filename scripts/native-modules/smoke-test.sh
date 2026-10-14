@@ -4,7 +4,7 @@
 #
 # Runs the addons through their ACTUAL JS wrappers under Electron (RUN_AS_NODE,
 # so no display is needed) and asserts:
-#   1. NODE_MODULE_VERSION matches the expected Electron ABI (default 146).
+#   1. NODE_MODULE_VERSION matches the expected Electron ABI (default 149).
 #   2. better-sqlite3-multiple-ciphers opens an encrypted SQLCipher DB, round-
 #      trips a row, and REJECTS a wrong key (the encrypted data path -- the V8
 #      patch's getters all run here).
@@ -19,7 +19,7 @@
 # Usage:   smoke-test.sh <node_dir> <electron_bin> [electron_abi]
 #   node_dir       dir holding better_sqlite3.node + node_sqlite3.node
 #   electron_bin   path to an Electron binary (the target version)
-#   electron_abi   expected NODE_MODULE_VERSION (default: 146)
+#   electron_abi   expected NODE_MODULE_VERSION (default: 149)
 #
 # Requires: node, npm, the Electron binary. Exit 0 on pass.
 #===============================================================================
@@ -34,7 +34,7 @@ die() { printf 'smoke-test: %s\n' "$*" >&2; exit 1; }
 
 node_dir="$(cd "$1" 2>/dev/null && pwd)" || die "node_dir not found: $1"
 electron_bin="$2"
-electron_abi="${3:-146}"
+electron_abi="${3:-149}"
 
 [[ -x $electron_bin ]] || die "electron binary not executable: $electron_bin"
 [[ -f "$node_dir/better_sqlite3.node" ]] \

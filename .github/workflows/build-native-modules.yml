@@ -7,7 +7,7 @@ name: Build Native Modules
 #
 #   build    -> compile on an OLD-glibc container (manylinux_2_28, glibc 2.28
 #               floor) so the .node load on older-but-supported distros.
-#   validate -> on a normal runner, load each .node under real Electron 42 and
+#   validate -> on a normal runner, load each .node under the real target Electron and
 #               run the encrypted-DB smoke test (ABI + round-trip + wrong-key).
 #   publish  -> only on a manual dispatch with publish=true: attach the four
 #               .node + checksums + provenance to the release named by release_tag
@@ -20,10 +20,15 @@ on:
   workflow_dispatch:
     inputs:
       electron_version:
-        description: "Electron version to target (ABI must be 146)"
+        description: "Electron version to target"
         required: false
         type: string
-        default: "42.3.0"
+        default: "44.7.2"
+      electron_abi:
+        description: "NODE_MODULE_VERSION of that Electron (44 -> 149)"
+        required: false
+        type: string
+        default: "149"
       release_tag:
         description: "Release tag to publish assets to (e.g. native-v1)"
         required: false
@@ -46,7 +51,8 @@ permissions:
 
 env:
   NODE_VERSION: "22.22.0"
-  ELECTRON_VERSION: ${{ inputs.electron_version || '42.3.0' }}
+  ELECTRON_VERSION: ${{ inputs.electron_version || '44.7.2' }}
+  ELECTRON_ABI: ${{ inputs.electron_abi || '149' }}
 
 jobs:
   #=============================================================================
@@ -107,7 +113,7 @@ jobs:
           if-no-files-found: error
 
   #=============================================================================
-  # validate -- load under real Electron 42 + encrypted-DB smoke, on a full
+  # validate -- load under the real target Electron + encrypted-DB smoke, on a full
   # runner (the old-glibc container can't reliably start Electron).
   #=============================================================================
   validate:
@@ -150,7 +156,7 @@ jobs:
         run: |
           chmod +x scripts/native-modules/smoke-test.sh
           scripts/native-modules/smoke-test.sh \
-            native-out "$PWD/electron-dist/electron" 146
+            native-out "$PWD/electron-dist/electron" "$ELECTRON_ABI"
 
   #=============================================================================
   # publish -- attach the four .node + checksums + provenance to release_tag.
@@ -197,6 +203,6 @@ jobs:
           body: |
             Prebuilt Linux native sqlite addons for Wispr Flow, rebuilt from
             public npm + the in-repo V8 14.8 patch against Electron
-            ${{ env.ELECTRON_VERSION }} (ABI 146). Built on glibc 2.28
+            ${{ env.ELECTRON_VERSION }} (ABI ${{ env.ELECTRON_ABI }}). Built on glibc 2.28
             (manylinux_2_28). Consumed via scripts/setup/fetch-native-bin.sh,
             pinned in native-modules-version.txt. Verify against SHA256SUMS.
